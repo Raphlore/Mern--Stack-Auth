@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { signInStart, signInSuccess, signInFailure } from '../redux/user/userSlice';
+import { useDispatch, useSelector } from 'react-redux';
 
 export default function SignIn() {
-  const [error, setError] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const navigate = useNavigate()
+  const { loading, error } = useSelector((state) => state.user);
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [formData, setFormData] = useState({
-    username: '',
     email: '',
     password: ''
   });
@@ -18,8 +19,7 @@ export default function SignIn() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      setLoading(true)
-      setError(false)
+      dispatch(signInStart());
 
       const res = await fetch('http://localhost:3000/api/auth/signin', {  // Fixed URL
         method: 'POST',
@@ -30,21 +30,20 @@ export default function SignIn() {
       });
 
       if (!res.ok) {
-        throw new Error('Network response was not ok');
+        throw new Error('User not found');
       }
 
       const data = await res.json();
-      setLoading(false)
       if (data.success === false) {
-        setError(true)
-        return
+        dispatch(signInFailure(data));
+        return;
       }
+      dispatch(signInSuccess(data));
 
-      navigate('/')
-      
+      navigate('/');
+
     } catch (error) {
-      setLoading(false)
-      setError(true)
+      dispatch(signInFailure(error.message)); // Use error.message here
     }
   };
 
@@ -70,7 +69,7 @@ export default function SignIn() {
         />
         <button disabled={loading} className="bg-slate-700 text-white p-3 rounded-lg uppercase hover:opacity-95 disabled:opacity-80">
           {loading ? 'Loading...' : 'Sign In'}
-          </button>
+        </button>
       </form>
       <div className='flex gap-2 mt-5'>
         <p>Dont have an account?</p>
@@ -78,7 +77,8 @@ export default function SignIn() {
           <span className='text-blue-500'>Sign up</span>
         </Link>
       </div>
-      <p className='text-red-700 mt-5'>{error && 'Something went wrong?'}</p>
+      <p className='text-red-700 mt-5'>{error ? (typeof error === 'string' ? error : error.message) : ''}
+      </p>
     </div>
   );
 }
